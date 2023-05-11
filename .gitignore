@@ -2,3 +2,7 @@ EXTRA/
 __pycache__
 .vscode/
 library.db
+helpers/
+models/
+router/
+
