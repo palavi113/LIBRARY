@@ -12,7 +12,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 # custom
 from hashing import Hash as sh
+<<<<<<< HEAD
 
+=======
+>>>>>>> eeeead5 (No change)
 app = FastAPI()
 
 # define secret key and algorithm
