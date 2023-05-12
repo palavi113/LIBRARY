@@ -10,10 +10,9 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta,date
 
 # custom
-from hashing import Hash
+from hashing import Hash as sh
 
 app = FastAPI()
-sh = Hash()
 
 # define secret key and algorithm
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
