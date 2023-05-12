@@ -1,18 +1,15 @@
 from typing import Any
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String,Date
-from sqlalchemy.orm import relationship
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import Depends, FastAPI, HTTPException, status,Path
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import jwt
+from passlib.context import CryptContext
+from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta,date
-from typing import Annotated
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel
-import hashing
+
+# custom
 from hashing import Hash
 
 app = FastAPI()
@@ -29,7 +26,6 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./library.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL,connect_args={"check_same_thread":False})
 SessionLocal = sessionmaker(autocommit=False,autoflush=False,bind=engine)
 session = SessionLocal()
-
 Base = declarative_base()
 
 def get_db():
@@ -42,10 +38,9 @@ def get_db():
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-
-
 # create user class
 class User(Base):
+
     __tablename__ = "USER"
 
     user_id = Column(Integer, primary_key=True, index=True)
@@ -98,33 +93,21 @@ def get_role(user :User,user_role : str,usr_name : str):
 
 def authenticate_user(userdb : User, username: str, password: str):
     """ Authenticate User """
-    print("method : authentication user")
-    print(username)
-    print(password)
-
     db = SessionLocal()
     usr = db.query(User).filter(User.Name == username).first()
     
     # check the user is available in table
     user = get_user(userdb,username)
     if not user:
-        print('User not found...')
         return False
     
     # check the user role is correct or not
     usr_role = get_role(userdb,usr.role,username)
     if not usr_role:
-        print('User role is not admin...')
         return False
-    else:
-        print("user role is admin")
     
-    print("verify the password and hash password")
     if not sh.verify(password, usr.Hashed_password):
-        print('Password verification failed..')
         return False
-    else:
-        print("password is correct")
     return True
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -132,8 +115,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -141,9 +123,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 # authorize user and generate token
 @app.post("/token",tags=['Authentication'])
 async def login_for_access_token(form_data:OAuth2PasswordRequestForm = Depends()):
-    print("method  : login fron access token")
-    print(form_data.username)
-    print(form_data.password)
     user = authenticate_user(User,form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -183,9 +162,9 @@ async def update_user(id : int,name : str,email : str,token: str = Depends(oauth
     db.commit()
     return user
 
-# deleter user 
+# delete user 
 @app.delete("/{nm}",tags=['Users'])
-async def del_user(name : str,token: str = Depends(oauth2_scheme)):
+async def del_user(name : str= Path(...),token: str = Depends(oauth2_scheme)):
     db = SessionLocal()
     user = db.query(User).filter(User.Name == name).delete()
     db.commit()
@@ -212,7 +191,7 @@ async def get_books():
 
 # display and specific books details
 @app.get("/{nm}",tags=["Books"])
-async def get_book(book_nm : str,token: str = Depends(oauth2_scheme)):
+async def get_book(book_nm : str = Path(...),token: str = Depends(oauth2_scheme)):
     db = SessionLocal()
     book = db.query(Book_lib).filter(Book_lib.book_name == book_nm).first()
     return book
@@ -267,10 +246,9 @@ async def issue_book_user(book_nm : str, user_nm :str,token: str = Depends(oauth
             db.commit()
             if isu_book:
                 return "Record Inserted"
-            else:
-                return "Record Not Inserted"
-    else:
-        return "Book Is Not Available"
+            return "Record Not Inserted"
+        return "User Not Found"
+    return "Book Is Not Available"
 
 @app.post("/return",tags=["Return"])
 async def return_book_user(book_nm : str, user_nm :str,token: str = Depends(oauth2_scheme)):
