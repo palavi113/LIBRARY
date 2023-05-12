@@ -10,9 +10,10 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta,date
 
 # custom
-from hashing import Hash as sh
+from hashing import Hash
 
 app = FastAPI()
+sh = Hash()
 
 # define secret key and algorithm
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
@@ -26,13 +27,6 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL,connect_args={"check_same_thread"
 SessionLocal = sessionmaker(autocommit=False,autoflush=False,bind=engine)
 session = SessionLocal()
 Base = declarative_base()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -58,7 +52,9 @@ class Book_lib(Base):
     is_available = Column(Boolean,default=True)
 
 class Book_Issue(Base):
+
     __tablename__ = "book_issue"
+
     issue_id = Column(Integer,primary_key=True)
     book_name = Column(String)
     user_name = Column(String)
@@ -79,12 +75,10 @@ def get_user(user :User,user_nm : str):
     print(usr_nm.Name)
     if usr_nm.Name == user_nm:
         return usr_nm.Name
-    # else :
-    #     return False
-    #     print("user not found------------")
-
+    return False
+ 
 def get_role(user :User,user_role : str,usr_name : str):
-    """authenticate the user is valid or not"""
+    """authenticate the user role is valid or not"""
     print("in get_role method print role : ",user_role)
     usr_role = session.query(User).filter(User.Name == usr_name).first()
     if usr_role.role =='admin':
@@ -260,13 +254,12 @@ async def return_book_user(book_nm : str, user_nm :str,token: str = Depends(oaut
     usr  = db.query(User).filter(User.Name == user_nm).first()
     """check the book is availble or not"""
     if book.is_available == False:
-        print("book is available")
         """check the user is available or not"""
         if usr:
             print("user is valid")
             """change the book avilable status"""
             book.is_available = True
             db.commit()
-            return " THank you"
-    else:
-        return "Book Is already returned"
+            return " Thank you"
+        return "User Not Found"        
+    return "Book Is already returned"
